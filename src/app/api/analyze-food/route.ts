@@ -13,11 +13,13 @@ Respond with ONE JSON object only (no markdown, no commentary) matching this sch
   "protein_g": number,
   "carbs_g": number,
   "fat_g": number,
+  "sugar_g": number,           // added + naturally occurring sugars (subset of carbs)
   "confidence": "low"|"medium"|"high",
   "notes": string              // brief reasoning, portion-size assumptions
 }
 
 Estimate generously based on typical restaurant/home portions visible in the photo.
+sugar_g should be the sugar portion of carbs (e.g. a soda is mostly sugar; a chicken breast has ~0g).
 If the image doesn't clearly show food, set calories to 0 and explain in notes.`;
 
 type FoodEstimate = {
@@ -26,6 +28,7 @@ type FoodEstimate = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  sugar_g: number;
   confidence: "low" | "medium" | "high";
   notes: string;
 };
@@ -39,6 +42,7 @@ function parseEstimate(text: string): FoodEstimate {
     protein_g: Math.max(0, Number(obj.protein_g) || 0),
     carbs_g: Math.max(0, Number(obj.carbs_g) || 0),
     fat_g: Math.max(0, Number(obj.fat_g) || 0),
+    sugar_g: Math.max(0, Number(obj.sugar_g) || 0),
     confidence: ["low", "medium", "high"].includes(obj.confidence) ? obj.confidence : "low",
     notes: String(obj.notes ?? "").slice(0, 500),
   };
@@ -113,6 +117,7 @@ export async function POST(request: Request) {
       protein_g: estimate.protein_g,
       carbs_g: estimate.carbs_g,
       fat_g: estimate.fat_g,
+      sugar_g: estimate.sugar_g,
       notes: estimate.notes,
       ai_raw: estimate as unknown as Record<string, unknown>,
     })

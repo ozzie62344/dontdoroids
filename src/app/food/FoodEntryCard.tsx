@@ -13,6 +13,7 @@ export type FoodEntry = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  sugar_g: number | null;
   notes: string | null;
 };
 
@@ -34,6 +35,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
   const [protein, setProtein] = useState(String(entry.protein_g ?? ""));
   const [carbs, setCarbs] = useState(String(entry.carbs_g ?? ""));
   const [fat, setFat] = useState(String(entry.fat_g ?? ""));
+  const [sugar, setSugar] = useState(String(entry.sugar_g ?? ""));
 
   // refine-mode state
   const [note, setNote] = useState("");
@@ -44,6 +46,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
     setProtein(String(entry.protein_g ?? ""));
     setCarbs(String(entry.carbs_g ?? ""));
     setFat(String(entry.fat_g ?? ""));
+    setSugar(String(entry.sugar_g ?? ""));
     setNote("");
     setErr(null);
   }
@@ -60,6 +63,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
         protein_g: protein ? Number(protein) : null,
         carbs_g: carbs ? Number(carbs) : null,
         fat_g: fat ? Number(fat) : null,
+        sugar_g: sugar ? Number(sugar) : null,
       })
       .eq("id", entry.id);
     setBusy(false);
@@ -133,6 +137,9 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                   {" "}· P {Number(entry.protein_g ?? 0).toFixed(0)}g · C{" "}
                   {Number(entry.carbs_g ?? 0).toFixed(0)}g · F{" "}
                   {Number(entry.fat_g ?? 0).toFixed(0)}g
+                  {entry.sugar_g != null && (
+                    <> · S {Number(entry.sugar_g).toFixed(0)}g</>
+                  )}
                 </span>
               </div>
               {entry.notes && (
@@ -149,7 +156,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                 placeholder="Label"
                 className="w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
               />
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm">
                 <label className="text-xs text-neutral-500">
                   kcal
                   <input
@@ -157,7 +164,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                     inputMode="numeric"
                     value={calories}
                     onChange={(e) => setCalories(e.target.value)}
-                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                   />
                 </label>
                 <label className="text-xs text-neutral-500">
@@ -167,7 +174,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                     inputMode="decimal"
                     value={protein}
                     onChange={(e) => setProtein(e.target.value)}
-                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                   />
                 </label>
                 <label className="text-xs text-neutral-500">
@@ -177,7 +184,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                     inputMode="decimal"
                     value={carbs}
                     onChange={(e) => setCarbs(e.target.value)}
-                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                   />
                 </label>
                 <label className="text-xs text-neutral-500">
@@ -187,7 +194,17 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                     inputMode="decimal"
                     value={fat}
                     onChange={(e) => setFat(e.target.value)}
-                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="text-xs text-neutral-500">
+                  sugar (g)
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={sugar}
+                    onChange={(e) => setSugar(e.target.value)}
+                    className="block w-full rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                   />
                 </label>
               </div>

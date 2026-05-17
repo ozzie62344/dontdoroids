@@ -16,6 +16,7 @@ about portion or content. Return ONE JSON object only (no markdown, no commentar
   "protein_g": number,
   "carbs_g": number,
   "fat_g": number,
+  "sugar_g": number,
   "confidence": "low"|"medium"|"high",
   "notes": string
 }`;
@@ -26,6 +27,7 @@ type FoodEstimate = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  sugar_g: number;
   confidence: "low" | "medium" | "high";
   notes: string;
 };
@@ -39,6 +41,7 @@ function parseEstimate(text: string): FoodEstimate {
     protein_g: Math.max(0, Number(obj.protein_g) || 0),
     carbs_g: Math.max(0, Number(obj.carbs_g) || 0),
     fat_g: Math.max(0, Number(obj.fat_g) || 0),
+    sugar_g: Math.max(0, Number(obj.sugar_g) || 0),
     confidence: ["low", "medium", "high"].includes(obj.confidence) ? obj.confidence : "low",
     notes: String(obj.notes ?? "").slice(0, 500),
   };
@@ -94,6 +97,7 @@ export async function POST(request: Request) {
       protein_g: entry.protein_g,
       carbs_g: entry.carbs_g,
       fat_g: entry.fat_g,
+      sugar_g: entry.sugar_g,
     });
     const msg = await anthropic.messages.create({
       model: MODEL,
@@ -131,6 +135,7 @@ export async function POST(request: Request) {
       protein_g: estimate.protein_g,
       carbs_g: estimate.carbs_g,
       fat_g: estimate.fat_g,
+      sugar_g: estimate.sugar_g,
       notes: estimate.notes,
       ai_raw: { ...(entry.ai_raw ?? {}), refinement: estimate, user_note: userNote },
     })

@@ -22,7 +22,10 @@ export default function PlanDayCard({
   const [exercises, setExercises] = useState<Exercise[]>(day.exercises);
 
   function addExercise() {
-    setExercises([...exercises, { name: "", sets: null, reps: "", notes: "" }]);
+    setExercises([
+      ...exercises,
+      { name: "", sets: null, reps: "", weight: "", notes: "" },
+    ]);
   }
   function updateExercise(i: number, patch: Partial<Exercise>) {
     setExercises(exercises.map((e, idx) => (idx === i ? { ...e, ...patch } : e)));
@@ -47,6 +50,7 @@ export default function PlanDayCard({
         name: e.name.trim(),
         sets: e.sets != null && Number(e.sets) > 0 ? Math.round(Number(e.sets)) : null,
         reps: e.reps?.trim() || null,
+        weight: e.weight?.trim() || null,
         notes: e.notes?.trim() || null,
       }));
 
@@ -124,6 +128,9 @@ export default function PlanDayCard({
                           {e.reps ?? ""}
                         </span>
                       )}
+                      {e.weight && (
+                        <span className="text-brand-600 font-medium"> @ {e.weight}</span>
+                      )}
                       {e.notes && (
                         <span className="text-xs text-neutral-500"> · {e.notes}</span>
                       )}
@@ -179,7 +186,7 @@ export default function PlanDayCard({
                         ✕
                       </button>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <input
                         type="number"
                         inputMode="numeric"
@@ -190,19 +197,25 @@ export default function PlanDayCard({
                           })
                         }
                         placeholder="sets"
-                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                       />
                       <input
                         value={ex.reps ?? ""}
                         onChange={(e) => updateExercise(i, { reps: e.target.value })}
-                        placeholder="reps (e.g. 8-10)"
-                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                        placeholder="reps (8-10)"
+                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
+                      />
+                      <input
+                        value={ex.weight ?? ""}
+                        onChange={(e) => updateExercise(i, { weight: e.target.value })}
+                        placeholder="weight (e.g. 135 lb)"
+                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                       />
                       <input
                         value={ex.notes ?? ""}
                         onChange={(e) => updateExercise(i, { notes: e.target.value })}
                         placeholder="notes"
-                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
+                        className="rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-2 py-1 text-sm"
                       />
                     </div>
                   </div>

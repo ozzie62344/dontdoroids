@@ -21,7 +21,7 @@ export default async function FoodPage() {
   const since = startOfTodayISO();
   const { data: todayRaw } = await supabase
     .from("food_entries")
-    .select("id, eaten_at, photo_path, label, calories, protein_g, carbs_g, fat_g, notes")
+    .select("id, eaten_at, photo_path, label, calories, protein_g, carbs_g, fat_g, sugar_g, notes")
     .eq("user_id", user.id)
     .gte("eaten_at", since)
     .order("eaten_at", { ascending: false });
@@ -45,8 +45,9 @@ export default async function FoodPage() {
       protein: acc.protein + Number(r.protein_g ?? 0),
       carbs: acc.carbs + Number(r.carbs_g ?? 0),
       fat: acc.fat + Number(r.fat_g ?? 0),
+      sugar: acc.sugar + Number(r.sugar_g ?? 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0 },
   );
 
   return (
@@ -55,22 +56,26 @@ export default async function FoodPage() {
       <main className="mx-auto max-w-3xl p-4 space-y-6">
         <section className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 space-y-3">
           <h1 className="text-xl font-semibold">Today</h1>
-          <div className="grid grid-cols-4 gap-3 text-center text-sm">
+          <div className="grid grid-cols-5 gap-2 text-center text-sm">
             <div>
-              <div className="text-2xl font-bold text-brand-600">{totals.calories}</div>
-              <div className="text-neutral-500">kcal</div>
+              <div className="text-xl font-bold text-brand-600">{totals.calories}</div>
+              <div className="text-xs text-neutral-500">kcal</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">{totals.protein.toFixed(0)}g</div>
-              <div className="text-neutral-500">protein</div>
+              <div className="text-xl font-bold">{totals.protein.toFixed(0)}g</div>
+              <div className="text-xs text-neutral-500">protein</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">{totals.carbs.toFixed(0)}g</div>
-              <div className="text-neutral-500">carbs</div>
+              <div className="text-xl font-bold">{totals.carbs.toFixed(0)}g</div>
+              <div className="text-xs text-neutral-500">carbs</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">{totals.fat.toFixed(0)}g</div>
-              <div className="text-neutral-500">fat</div>
+              <div className="text-xl font-bold">{totals.fat.toFixed(0)}g</div>
+              <div className="text-xs text-neutral-500">fat</div>
+            </div>
+            <div>
+              <div className="text-xl font-bold">{totals.sugar.toFixed(0)}g</div>
+              <div className="text-xs text-neutral-500">sugar</div>
             </div>
           </div>
           {goals?.daily_calorie_goal != null && (
@@ -96,6 +101,28 @@ export default async function FoodPage() {
                 value={totals.protein}
                 max={Number(goals.daily_protein_g_goal)}
               />
+            </div>
+          )}
+          {goals?.daily_fat_g_goal != null && (
+            <div>
+              <div className="flex justify-between text-xs text-neutral-500">
+                <span>fat (limit)</span>
+                <span>
+                  {totals.fat.toFixed(0)}g / {Number(goals.daily_fat_g_goal).toFixed(0)}g
+                </span>
+              </div>
+              <ProgressBar value={totals.fat} max={Number(goals.daily_fat_g_goal)} />
+            </div>
+          )}
+          {goals?.daily_sugar_g_goal != null && (
+            <div>
+              <div className="flex justify-between text-xs text-neutral-500">
+                <span>sugar (limit)</span>
+                <span>
+                  {totals.sugar.toFixed(0)}g / {Number(goals.daily_sugar_g_goal).toFixed(0)}g
+                </span>
+              </div>
+              <ProgressBar value={totals.sugar} max={Number(goals.daily_sugar_g_goal)} />
             </div>
           )}
         </section>

@@ -10,6 +10,8 @@ type Unit = "metric" | "imperial";
 export type GoalsFormInitial = {
   daily_calorie_goal: number | null;
   daily_protein_g_goal: number | null;
+  daily_fat_g_goal: number | null;
+  daily_sugar_g_goal: number | null;
   weekly_workout_goal: number | null;
   goal_weight_kg: number | null;
 };
@@ -51,6 +53,12 @@ export default function GoalsForm({
       ? "150"
       : "",
   );
+  const [fat, setFat] = useState(
+    initial.daily_fat_g_goal != null ? String(initial.daily_fat_g_goal) : "",
+  );
+  const [sugar, setSugar] = useState(
+    initial.daily_sugar_g_goal != null ? String(initial.daily_sugar_g_goal) : "",
+  );
   const [workouts, setWorkouts] = useState(
     initial.weekly_workout_goal != null
       ? String(initial.weekly_workout_goal)
@@ -81,6 +89,8 @@ export default function GoalsForm({
 
     const cal = opts.skip || !calories ? null : Math.max(0, Math.round(Number(calories)));
     const pro = opts.skip || !protein ? null : Math.max(0, Number(protein));
+    const ft = opts.skip || !fat ? null : Math.max(0, Number(fat));
+    const sg = opts.skip || !sugar ? null : Math.max(0, Number(sugar));
     const wk = opts.skip || !workouts ? null : Math.max(0, Math.round(Number(workouts)));
     const gw = opts.skip ? null : toKg(goalWeight, unit);
     const sw = opts.skip ? null : toKg(startWeight, unit);
@@ -91,6 +101,8 @@ export default function GoalsForm({
         user_id: user.id,
         daily_calorie_goal: cal,
         daily_protein_g_goal: pro,
+        daily_fat_g_goal: ft,
+        daily_sugar_g_goal: sg,
         weekly_workout_goal: wk,
         goal_weight_kg: gw,
         onboarding_completed_at: new Date().toISOString(),
@@ -124,6 +136,9 @@ export default function GoalsForm({
       router.refresh();
     }
   }
+
+  const inputCls =
+    "mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2";
 
   return (
     <form
@@ -174,7 +189,7 @@ export default function GoalsForm({
               min={0}
               value={calories}
               onChange={(e) => setCalories(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+              className={inputCls}
             />
           </label>
           <label className="text-sm">
@@ -185,10 +200,37 @@ export default function GoalsForm({
               min={0}
               value={protein}
               onChange={(e) => setProtein(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+              className={inputCls}
+            />
+          </label>
+          <label className="text-sm">
+            <span className="text-neutral-500">Fat limit (g)</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={fat}
+              onChange={(e) => setFat(e.target.value)}
+              placeholder="e.g. 70"
+              className={inputCls}
+            />
+          </label>
+          <label className="text-sm">
+            <span className="text-neutral-500">Sugar limit (g)</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={sugar}
+              onChange={(e) => setSugar(e.target.value)}
+              placeholder="e.g. 50"
+              className={inputCls}
             />
           </label>
         </div>
+        <p className="text-xs text-neutral-500">
+          Fat + sugar are <strong>limits</strong> — bars turn red when you go over.
+        </p>
       </section>
 
       <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5 space-y-4">
@@ -202,7 +244,7 @@ export default function GoalsForm({
             max={14}
             value={workouts}
             onChange={(e) => setWorkouts(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+            className={inputCls}
           />
         </label>
       </section>
@@ -221,7 +263,7 @@ export default function GoalsForm({
                 step="0.1"
                 value={startWeight}
                 onChange={(e) => setStartWeight(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+                className={inputCls}
               />
             </label>
             <label className="text-sm">
@@ -234,7 +276,7 @@ export default function GoalsForm({
                 step="0.1"
                 value={startHeight}
                 onChange={(e) => setStartHeight(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+                className={inputCls}
               />
             </label>
           </div>
@@ -249,7 +291,7 @@ export default function GoalsForm({
             step="0.1"
             value={goalWeight}
             onChange={(e) => setGoalWeight(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+            className={inputCls}
           />
         </label>
         {mode === "onboarding" && (

@@ -4,6 +4,8 @@ import { toLocalDateStr } from "@/lib/dates";
 export type UserGoals = {
   daily_calorie_goal: number | null;
   daily_protein_g_goal: number | null;
+  daily_fat_g_goal: number | null;
+  daily_sugar_g_goal: number | null;
   weekly_workout_goal: number | null;
   goal_weight_kg: number | null;
   onboarding_completed_at: string | null;
@@ -16,7 +18,7 @@ export async function getGoals(): Promise<{ userId: string; goals: UserGoals | n
   const { data } = await supabase
     .from("user_goals")
     .select(
-      "daily_calorie_goal, daily_protein_g_goal, weekly_workout_goal, goal_weight_kg, onboarding_completed_at",
+      "daily_calorie_goal, daily_protein_g_goal, daily_fat_g_goal, daily_sugar_g_goal, weekly_workout_goal, goal_weight_kg, onboarding_completed_at",
     )
     .eq("user_id", user.id)
     .maybeSingle();

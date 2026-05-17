@@ -26,6 +26,8 @@ export default async function OnboardingPage() {
         initial={{
           daily_calorie_goal: null,
           daily_protein_g_goal: null,
+          daily_fat_g_goal: null,
+          daily_sugar_g_goal: null,
           weekly_workout_goal: null,
           goal_weight_kg: null,
         }}

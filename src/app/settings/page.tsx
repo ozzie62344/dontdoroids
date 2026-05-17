@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const { data: row } = await supabase
     .from("user_goals")
     .select(
-      "daily_calorie_goal, daily_protein_g_goal, weekly_workout_goal, goal_weight_kg",
+      "daily_calorie_goal, daily_protein_g_goal, daily_fat_g_goal, daily_sugar_g_goal, weekly_workout_goal, goal_weight_kg",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -27,6 +27,8 @@ export default async function SettingsPage() {
           initial={{
             daily_calorie_goal: row?.daily_calorie_goal ?? null,
             daily_protein_g_goal: row?.daily_protein_g_goal ?? null,
+            daily_fat_g_goal: row?.daily_fat_g_goal ?? null,
+            daily_sugar_g_goal: row?.daily_sugar_g_goal ?? null,
             weekly_workout_goal: row?.weekly_workout_goal ?? null,
             goal_weight_kg: row?.goal_weight_kg ?? null,
           }}

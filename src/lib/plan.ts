@@ -2,6 +2,7 @@ export type Exercise = {
   name: string;
   sets?: number | null;
   reps?: string | null;
+  weight?: string | null;   // free-text, e.g. "135 lb", "20 kg dumbbells", "bodyweight"
   notes?: string | null;
 };
 

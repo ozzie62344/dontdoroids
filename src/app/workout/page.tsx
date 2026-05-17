@@ -114,6 +114,9 @@ export default async function WorkoutPage() {
                           {e.reps ?? ""}
                         </span>
                       )}
+                      {e.weight && (
+                        <span className="text-brand-600 font-medium"> @ {e.weight}</span>
+                      )}
                       {e.notes && (
                         <span className="text-xs text-neutral-500"> · {e.notes}</span>
                       )}

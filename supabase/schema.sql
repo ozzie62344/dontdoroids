@@ -15,6 +15,7 @@ create table if not exists public.food_entries (
   protein_g numeric,
   carbs_g numeric,
   fat_g numeric,
+  sugar_g numeric,
   notes text,
   ai_raw jsonb                -- full Claude response for debugging / re-use
 );
@@ -111,6 +112,8 @@ create table if not exists public.user_goals (
   user_id uuid primary key references auth.users(id) on delete cascade,
   daily_calorie_goal integer,
   daily_protein_g_goal numeric,
+  daily_fat_g_goal numeric,
+  daily_sugar_g_goal numeric,
   weekly_workout_goal integer,
   goal_weight_kg numeric,
   onboarding_completed_at timestamptz,

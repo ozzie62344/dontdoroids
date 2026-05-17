@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const [todayFood, workouts, weekWorkouts, latestMetric] = await Promise.all([
     supabase
       .from("food_entries")
-      .select("calories, protein_g")
+      .select("calories, protein_g, fat_g, sugar_g")
       .eq("user_id", user.id)
       .gte("eaten_at", startOfTodayISO()),
     supabase
@@ -59,6 +59,14 @@ export default async function DashboardPage() {
   );
   const todayProtein = (todayFood.data ?? []).reduce(
     (a, r) => a + Number(r.protein_g ?? 0),
+    0,
+  );
+  const todayFat = (todayFood.data ?? []).reduce(
+    (a, r) => a + Number(r.fat_g ?? 0),
+    0,
+  );
+  const todaySugar = (todayFood.data ?? []).reduce(
+    (a, r) => a + Number(r.sugar_g ?? 0),
     0,
   );
   const { current } = computeStreaks(
@@ -111,6 +119,40 @@ export default async function DashboardPage() {
               <ProgressBar
                 value={todayProtein}
                 max={Number(goals.daily_protein_g_goal)}
+                className="mt-1"
+              />
+            </div>
+          )}
+          {goals.daily_fat_g_goal != null && (
+            <div className="mt-2">
+              <div className="flex justify-between text-sm">
+                <span>
+                  Fat (limit){" "}
+                  <strong>
+                    {todayFat.toFixed(0)}g / {Number(goals.daily_fat_g_goal).toFixed(0)}g
+                  </strong>
+                </span>
+              </div>
+              <ProgressBar
+                value={todayFat}
+                max={Number(goals.daily_fat_g_goal)}
+                className="mt-1"
+              />
+            </div>
+          )}
+          {goals.daily_sugar_g_goal != null && (
+            <div className="mt-2">
+              <div className="flex justify-between text-sm">
+                <span>
+                  Sugar (limit){" "}
+                  <strong>
+                    {todaySugar.toFixed(0)}g / {Number(goals.daily_sugar_g_goal).toFixed(0)}g
+                  </strong>
+                </span>
+              </div>
+              <ProgressBar
+                value={todaySugar}
+                max={Number(goals.daily_sugar_g_goal)}
                 className="mt-1"
               />
             </div>

@@ -33,6 +33,7 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
   const [experience, setExperience] = useState(EXPERIENCE[0].value);
   const [daysPerWeek, setDaysPerWeek] = useState(4);
   const [equipment, setEquipment] = useState<string[]>(["Dumbbells", "Bodyweight only"]);
+  const [unit, setUnit] = useState<"lb" | "kg">("lb");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
       const res = await fetch("/api/generate-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal, experience, daysPerWeek, equipment, notes }),
+        body: JSON.stringify({ goal, experience, daysPerWeek, equipment, unit, notes }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -165,6 +166,26 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
               </div>
             </fieldset>
 
+            <div>
+              <div className="text-sm text-neutral-500 mb-1">Weight units</div>
+              <div className="inline-flex rounded-lg border border-neutral-300 dark:border-neutral-700 overflow-hidden text-sm">
+                <button
+                  type="button"
+                  onClick={() => setUnit("lb")}
+                  className={`px-4 py-1 ${unit === "lb" ? "bg-brand-600 text-white" : ""}`}
+                >
+                  lb
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUnit("kg")}
+                  className={`px-4 py-1 ${unit === "kg" ? "bg-brand-600 text-white" : ""}`}
+                >
+                  kg
+                </button>
+              </div>
+            </div>
+
             <label className="block text-sm">
               <span className="text-neutral-500">Anything else? (injuries, preferences)</span>
               <textarea
@@ -221,6 +242,9 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
                         <li key={i}>
                           • {e.name}
                           {e.sets || e.reps ? ` — ${e.sets ? e.sets + "×" : ""}${e.reps ?? ""}` : ""}
+                          {e.weight && (
+                            <span className="text-brand-600 font-medium"> @ {e.weight}</span>
+                          )}
                           {e.notes ? ` (${e.notes})` : ""}
                         </li>
                       ))}
