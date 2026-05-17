@@ -2,10 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Select from "@/components/Select";
+
+const EXPERIENCE = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+];
 
 export default function FillWeightsButton() {
   const router = useRouter();
   const [unit, setUnit] = useState<"lb" | "kg">("lb");
+  const [experience, setExperience] = useState("intermediate");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -18,11 +26,11 @@ export default function FillWeightsButton() {
       const res = await fetch("/api/fill-weights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ unit }),
+        body: JSON.stringify({ unit, experience }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error ?? res.statusText);
-      setMsg(`Weights filled in ${unit}.`);
+      setMsg(`Weights filled in ${unit} (${experience}).`);
       router.refresh();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -31,7 +39,7 @@ export default function FillWeightsButton() {
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex flex-wrap items-center gap-2">
       <div className="inline-flex rounded-lg border border-neutral-300 dark:border-neutral-700 overflow-hidden text-xs">
         <button
           type="button"
@@ -48,10 +56,13 @@ export default function FillWeightsButton() {
           kg
         </button>
       </div>
+      <div className="w-36 text-sm">
+        <Select value={experience} onChange={setExperience} options={EXPERIENCE} />
+      </div>
       <button
         onClick={fill}
         disabled={busy}
-        className="rounded-lg border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-60 text-sm font-medium px-3 py-2"
+        className="rounded-lg bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-60 text-sm font-medium px-3 py-2"
       >
         {busy ? "Filling…" : "🏋 Fill in weights"}
       </button>

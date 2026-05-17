@@ -1,43 +1,35 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { loadBodyContext, WEIGHT_SCALING_RULES } from "@/lib/bodyContext";
 
-// Allow this route up to 60s on Vercel (Pro). On Hobby it's ignored — see note below.
 export const maxDuration = 60;
 
-// Haiku 4.5 is fast + cheap and easily handles a 7-day plan in JSON.
 const MODEL = "claude-haiku-4-5";
 
 const SYSTEM_PROMPT = `You are a strength + conditioning coach building a 7-day weekly workout plan.
-
-You will receive: goal, experience level, training days per week, equipment, preferred weight unit (lb or kg), the user's current bodyweight (if known), and free-form notes.
 
 Output ONE JSON array (no markdown, no commentary) of exactly 7 objects, one per weekday in Monday..Sunday order. Day indices: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun.
 
 Each object:
 {
-  "day_of_week": 0,                    // 0..6, must match position
+  "day_of_week": 0,
   "focus": "Push" | null,              // 1-3 words; null only if is_rest_day true
   "is_rest_day": false,
-  "exercises": [                       // empty array if rest day
+  "exercises": [
     { "name": "Bench press", "sets": 4, "reps": "6-8", "weight": "135 lb", "notes": "RPE 8" }
   ]
 }
 
-Rules:
-- Use EXACTLY the number of training days requested; the rest are rest days. Honor user notes about which specific day(s) to rest.
+STRUCTURE RULES:
+- Use EXACTLY the requested number of training days; the rest are rest days. Honor user notes about which specific day(s) to rest.
 - 4-7 exercises per training day. Compound first, isolation later.
 - Pick exercises that fit the equipment list.
-- ALWAYS include a "weight" field, using the user's chosen unit (lb or kg):
-  * Beginner: conservative starting weights
-  * Intermediate: typical working weights
-  * Advanced: heavier working weights
-  * Sanity-check against bodyweight (beginner bench ≈ 0.5–0.75× bodyweight, etc.)
-  * Bodyweight moves: "bodyweight" or "BW + 25 lb"
-  * Cardio/holds where loaded weight doesn't apply: "—"
 - "reps" string examples: "8-10", "AMRAP", "30s".
 - "notes" short or empty.
-- Respect injury/time constraints from notes (e.g. "1 hour sessions" → keep volume modest).`;
+- Respect injury/time constraints from notes.
+
+${WEIGHT_SCALING_RULES}`;
 
 type Exercise = {
   name: string;
@@ -54,8 +46,6 @@ type PlanDayPayload = {
 };
 
 function extractJsonArray(text: string): string {
-  // Strip code fences and find the first '[' .. last ']' so a trailing comment
-  // or chatty preamble doesn't break JSON.parse.
   const stripped = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   const start = stripped.indexOf("[");
   const end = stripped.lastIndexOf("]");
@@ -127,20 +117,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Goal and experience required" }, { status: 400 });
   }
 
-  const { data: latestWeight } = await supabase
-    .from("body_metrics")
-    .select("weight_kg")
-    .eq("user_id", user.id)
-    .not("weight_kg", "is", null)
-    .order("measured_on", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let bodyweightStr = "unknown";
-  if (latestWeight?.weight_kg) {
-    const kg = Number(latestWeight.weight_kg);
-    bodyweightStr =
-      unit === "kg" ? `${kg.toFixed(1)} kg` : `${(kg / 0.45359237).toFixed(1)} lb`;
+  const body_ctx = await loadBodyContext(supabase, user.id, unit);
+  if (!body_ctx.hasBodyweight) {
+    return NextResponse.json(
+      {
+        error:
+          "Log your current weight under Body first — without it, Claude can't size the weights to you.",
+      },
+      { status: 400 },
+    );
   }
 
   const userMsg =
@@ -149,9 +134,11 @@ export async function POST(request: Request) {
     `Training days per week: ${daysPerWeek}\n` +
     `Equipment: ${equipment.join(", ") || "unspecified"}\n` +
     `Preferred weight unit: ${unit}\n` +
-    `User bodyweight: ${bodyweightStr}\n` +
+    `${body_ctx.bodyweightLine}\n` +
+    `${body_ctx.heightLine}\n` +
     (notes ? `Notes: ${notes}\n` : "") +
-    `\nReturn the JSON array (7 days, Mon..Sun). Every exercise must include "weight" in ${unit} (or "bodyweight" / "—" where loaded weight doesn't apply).`;
+    `\nReturn the JSON array (7 days, Mon..Sun). Every exercise must include "weight" in ${unit}. ` +
+    `For each compound lift, you MUST compute the weight from the user's bodyweight using the scaling table — do not output stereotypical gym numbers.`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -160,12 +147,10 @@ export async function POST(request: Request) {
     const msg = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 4096,
-      temperature: 0.4,
+      temperature: 0.3,
       system: SYSTEM_PROMPT,
       messages: [
         { role: "user", content: userMsg },
-        // Prefill the assistant turn with "[" to force JSON-array output and
-        // stop Claude from preamble-ing.
         { role: "assistant", content: "[" },
       ],
     });
@@ -176,7 +161,6 @@ export async function POST(request: Request) {
         { status: 502 },
       );
     }
-    // Because we prefilled "[", the response starts mid-array — re-prepend it.
     rawText = "[" + textBlock.text;
   } catch (err) {
     console.error("Claude generate-plan API call failed:", err);

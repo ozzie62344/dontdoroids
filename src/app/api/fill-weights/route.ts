@@ -3,28 +3,24 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import type { Exercise, PlanDay } from "@/lib/plan";
 import { fillPlan } from "@/lib/plan";
+import { loadBodyContext, WEIGHT_SCALING_RULES } from "@/lib/bodyContext";
 
 export const maxDuration = 60;
 
 const MODEL = "claude-haiku-4-5";
 
-const SYSTEM_PROMPT = `You are filling in missing weight recommendations on a user's existing weekly workout plan.
+const SYSTEM_PROMPT = `You are filling in weight recommendations on a user's existing weekly workout plan.
 
-You will receive: the user's existing 7-day plan as a JSON array (Monday=0..Sunday=6), the user's experience level if available, the user's bodyweight, and the preferred weight unit (lb or kg).
-
-YOUR ONLY JOB is to add or update the "weight" field on each exercise. You MUST NOT:
+YOUR ONLY JOB is to add or replace the "weight" field on each exercise. You MUST NOT:
 - Change exercise names
 - Change sets or reps
 - Change focus or is_rest_day
 - Add or remove exercises
 - Add or remove days
 
-Output ONE JSON array with the same structure. Every exercise must have a "weight" field, using the user's chosen unit:
-- Loaded exercises: concrete numbers like "135 lb", "60 kg", "20 lb dumbbells"
-- Bodyweight exercises: "bodyweight" or "BW + 25 lb"
-- Cardio / holds / where loaded weight doesn't apply: "—" (a single dash)
+Output ONE JSON array (no markdown, no commentary) with the same structure as the input. Every exercise must have a "weight" field, using the user's chosen unit.
 
-Sanity-check against bodyweight (beginner bench ~0.5-0.75x bodyweight, etc.). Default to intermediate working weights if experience is unspecified.`;
+${WEIGHT_SCALING_RULES}`;
 
 function extractJsonArray(text: string): string {
   const stripped = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
@@ -68,8 +64,12 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const unit: "lb" | "kg" = body?.unit === "kg" ? "kg" : "lb";
+  // Optional override — if user says "I'm intermediate" we pass it; default unspecified.
+  const experience =
+    typeof body?.experience === "string" && body.experience.trim()
+      ? body.experience.trim()
+      : "(unspecified — assume intermediate)";
 
-  // Fetch the existing plan.
   const { data: rows } = await supabase
     .from("workout_plan")
     .select("day_of_week, focus, is_rest_day, exercises")
@@ -84,24 +84,17 @@ export async function POST(request: Request) {
     );
   }
 
-  // Latest bodyweight for sane recommendations.
-  const { data: latestWeight } = await supabase
-    .from("body_metrics")
-    .select("weight_kg")
-    .eq("user_id", user.id)
-    .not("weight_kg", "is", null)
-    .order("measured_on", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let bodyweightStr = "unknown";
-  if (latestWeight?.weight_kg) {
-    const kg = Number(latestWeight.weight_kg);
-    bodyweightStr =
-      unit === "kg" ? `${kg.toFixed(1)} kg` : `${(kg / 0.45359237).toFixed(1)} lb`;
+  const body_ctx = await loadBodyContext(supabase, user.id, unit);
+  if (!body_ctx.hasBodyweight) {
+    return NextResponse.json(
+      {
+        error:
+          "Log your current weight under Body first — without it, Claude can't size the weights to you.",
+      },
+      { status: 400 },
+    );
   }
 
-  // We send a slim version (no day_of_week — index encodes that).
   const slim = plan.map((d) => ({
     day_of_week: d.day_of_week,
     focus: d.focus,
@@ -116,9 +109,11 @@ export async function POST(request: Request) {
 
   const userMsg =
     `Existing plan:\n${JSON.stringify(slim, null, 2)}\n\n` +
-    `User bodyweight: ${bodyweightStr}\n` +
+    `${body_ctx.bodyweightLine}\n` +
+    `${body_ctx.heightLine}\n` +
+    `Experience: ${experience}\n` +
     `Preferred weight unit: ${unit}\n\n` +
-    `Return the same 7-day JSON array but with a "weight" field added to every exercise. Do not change names, sets, reps, or notes.`;
+    `Return the same 7-day JSON array with a "weight" field added to every exercise — calculated from the user's bodyweight using the scaling table (do not output stereotypical gym numbers). Do NOT change exercise names, sets, reps, focus, or notes.`;
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -127,7 +122,7 @@ export async function POST(request: Request) {
     const msg = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 4096,
-      temperature: 0.3,
+      temperature: 0.2,
       system: SYSTEM_PROMPT,
       messages: [
         { role: "user", content: userMsg },
@@ -149,7 +144,6 @@ export async function POST(request: Request) {
   try {
     const arr = JSON.parse(extractJsonArray(rawText));
     if (!Array.isArray(arr) || arr.length === 0) throw new Error("Empty / invalid array");
-    // Index by day_of_week so order doesn't matter.
     const byDay = new Map<number, PlanDay>();
     for (const raw of arr) {
       const idx = Number(raw?.day_of_week);
@@ -164,7 +158,6 @@ export async function POST(request: Request) {
         exercises: exs,
       });
     }
-    // Merge: keep original days that Claude didn't return.
     parsed = plan.map((orig) => byDay.get(orig.day_of_week) ?? orig);
   } catch (err) {
     console.error("Parse failed. Raw:", rawText);
@@ -175,8 +168,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Safety net: only persist weight changes — if Claude tweaked an exercise name or
-  // sets/reps, preserve the original values from the user's plan.
+  // Only persist weight changes — preserve original names/sets/reps/notes/focus.
   const finalPlan: PlanDay[] = plan.map((orig) => {
     const fresh = parsed.find((p) => p.day_of_week === orig.day_of_week);
     if (!fresh) return orig;
@@ -191,7 +183,6 @@ export async function POST(request: Request) {
     };
   });
 
-  // Persist updated weights.
   const rowsToUpsert = finalPlan
     .filter((d) => !d.is_rest_day && d.exercises.length > 0)
     .map((d) => ({
