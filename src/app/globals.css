@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900 antialiased;
+  /* Honor iPhone safe areas (set with viewport-fit: cover in layout). */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  /* Prevent iOS from zooming text inputs on focus. */
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    @apply bg-neutral-950 text-neutral-100;
+  }
+}
+
+/* iOS won't zoom inputs whose font-size is ≥ 16px. */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Bigger tap targets on coarse pointers (touchscreens). */
+@media (pointer: coarse) {
+  button, [role="button"], a {
+    min-height: 44px;
+  }
+}
