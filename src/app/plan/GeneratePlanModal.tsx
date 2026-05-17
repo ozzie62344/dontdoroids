@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { PlanDay } from "@/lib/plan";
+import Select from "@/components/Select";
 
 const GOALS = [
   { value: "build muscle / hypertrophy", label: "Build muscle" },
@@ -117,36 +118,20 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
 
         {!preview && (
           <>
-            <label className="block text-sm">
+            <div className="block text-sm">
               <span className="text-neutral-500">Goal</span>
-              <select
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
-              >
-                {GOALS.map((g) => (
-                  <option key={g.value} value={g.value}>
-                    {g.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <div className="mt-1">
+                <Select value={goal} onChange={setGoal} options={[...GOALS]} />
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm">
+              <div className="block text-sm">
                 <span className="text-neutral-500">Experience</span>
-                <select
-                  value={experience}
-                  onChange={(e) => setExperience(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
-                >
-                  {EXPERIENCE.map((e) => (
-                    <option key={e.value} value={e.value}>
-                      {e.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <div className="mt-1">
+                  <Select value={experience} onChange={setExperience} options={[...EXPERIENCE]} />
+                </div>
+              </div>
               <label className="block text-sm">
                 <span className="text-neutral-500">Training days / week</span>
                 <input
@@ -155,7 +140,7 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
                   max={7}
                   value={daysPerWeek}
                   onChange={(e) => setDaysPerWeek(Number(e.target.value))}
-                  className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2"
+                  className="mt-1 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2"
                 />
               </label>
             </div>

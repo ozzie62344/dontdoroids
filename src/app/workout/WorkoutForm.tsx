@@ -4,6 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { todayStr } from "@/lib/dates";
+import Select from "@/components/Select";
+
+const KIND_OPTIONS = [
+  { value: "", label: "Type (optional)…" },
+  { value: "lift", label: "Lift" },
+  { value: "cardio", label: "Cardio" },
+  { value: "yoga", label: "Yoga / mobility" },
+  { value: "sport", label: "Sport" },
+  { value: "other", label: "Other" },
+];
 
 export default function WorkoutForm({ alreadyDoneToday }: { alreadyDoneToday: boolean }) {
   const router = useRouter();
@@ -42,23 +52,12 @@ export default function WorkoutForm({ alreadyDoneToday }: { alreadyDoneToday: bo
         {alreadyDoneToday ? "Today’s workout logged" : "Did you work out today?"}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <select
-          value={kind}
-          onChange={(e) => setKind(e.target.value)}
-          className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="">Type (optional)…</option>
-          <option value="lift">Lift</option>
-          <option value="cardio">Cardio</option>
-          <option value="yoga">Yoga / mobility</option>
-          <option value="sport">Sport</option>
-          <option value="other">Other</option>
-        </select>
+        <Select value={kind} onChange={setKind} options={KIND_OPTIONS} placeholder="Type (optional)…" />
         <input
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Notes (optional)"
-          className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm"
+          className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm"
         />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
