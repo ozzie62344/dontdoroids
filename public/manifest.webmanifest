@@ -1,13 +1,13 @@
 {
-  "name": "FitTracker",
-  "short_name": "FitTracker",
+  "name": "dontdoroids",
+  "short_name": "dontdoroids",
   "description": "Photo food log, workout streaks, weekly weight + height.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
-  "theme_color": "#ea580c",
+  "theme_color": "#dc2626",
   "icons": [
     {
       "src": "/icon-192.png",

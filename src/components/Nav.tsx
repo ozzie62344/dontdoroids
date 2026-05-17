@@ -15,7 +15,7 @@ export default function Nav({ email }: { email?: string | null }) {
     >
       <div className="mx-auto max-w-3xl flex items-center justify-between px-4 py-3">
         <Link href="/dashboard" className="font-semibold text-brand-600">
-          FitTracker
+          dontdoroids
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           {tabs.map((t) => (

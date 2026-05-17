@@ -1,4 +1,4 @@
--- FitTracker schema
+-- dontdoroids schema
 -- Run this in the Supabase SQL editor after creating your project.
 
 -- =========================================

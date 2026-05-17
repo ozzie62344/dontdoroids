@@ -2,12 +2,12 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "FitTracker",
+  title: "dontdoroids",
   description: "Photo food log, workout streaks, weekly weight + height.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "FitTracker",
+    title: "dontdoroids",
     statusBarStyle: "black-translucent",
   },
   icons: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ea580c" },
+    { media: "(prefers-color-scheme: light)", color: "#dc2626" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
   width: "device-width",

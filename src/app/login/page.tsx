@@ -34,7 +34,7 @@ export default function LoginPage() {
         className="w-full max-w-sm space-y-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm"
       >
         <h1 className="text-2xl font-semibold">Welcome back</h1>
-        <p className="text-sm text-neutral-500">Log in to your FitTracker account.</p>
+        <p className="text-sm text-neutral-500">Log in to your dontdoroids account.</p>
 
         <label className="block text-sm">
           <span className="text-neutral-600 dark:text-neutral-400">Email</span>
