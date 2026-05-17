@@ -3,6 +3,7 @@ import Nav from "@/components/Nav";
 import WorkoutForm from "./WorkoutForm";
 import StreakCalendar from "@/components/StreakCalendar";
 import { computeStreaks, daysAgoStr, todayStr } from "@/lib/dates";
+import { getGoals, startOfWeekStr } from "@/lib/goals";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,10 @@ export default async function WorkoutPage() {
   const { current, longest } = computeStreaks(days);
   const today = todayStr();
   const alreadyDoneToday = days.has(today);
+  const weekStart = startOfWeekStr();
+  const workoutsThisWeek = (rows ?? []).filter((r) => (r.day as string) >= weekStart).length;
+  const goalsRow = await getGoals();
+  const weeklyGoal = goalsRow?.goals?.weekly_workout_goal ?? null;
 
   return (
     <>
@@ -48,6 +53,24 @@ export default async function WorkoutPage() {
               ? "Don't break the chain — log today's workout."
               : "Time to start a new streak."}
           </p>
+          {weeklyGoal != null && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs opacity-80">
+                <span>This week</span>
+                <span>
+                  {workoutsThisWeek} / {weeklyGoal}
+                </span>
+              </div>
+              <div className="mt-1 h-2 w-full rounded-full bg-white/20 overflow-hidden">
+                <div
+                  className="h-full bg-white"
+                  style={{
+                    width: `${Math.min(100, (workoutsThisWeek / Math.max(weeklyGoal, 1)) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         <WorkoutForm alreadyDoneToday={alreadyDoneToday} />

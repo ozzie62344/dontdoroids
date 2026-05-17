@@ -26,7 +26,7 @@ export default function SignupPage() {
       return;
     }
     if (data.session) {
-      router.push("/dashboard");
+      router.push("/onboarding");
       router.refresh();
     } else {
       setMessage("Check your email to confirm your account, then log in.");

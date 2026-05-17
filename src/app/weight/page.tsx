@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import WeightForm from "./WeightForm";
 import WeightChart from "@/components/WeightChart";
+import { getGoals } from "@/lib/goals";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,12 @@ export default async function WeightPage() {
   const latestWeight = weightEntries[0];
   const prevWeight = weightEntries[1];
   const latestHeight = list.find((m) => m.height_cm != null)?.height_cm ?? null;
+  const goalsRow = await getGoals();
+  const goalWeightKg = goalsRow?.goals?.goal_weight_kg ?? null;
+  const toGoal =
+    latestWeight && goalWeightKg != null
+      ? Number(latestWeight.weight_kg) - Number(goalWeightKg)
+      : null;
 
   const delta =
     latestWeight && prevWeight
@@ -56,15 +63,36 @@ export default async function WeightPage() {
             )}
           </div>
           <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
-            <p className="text-xs text-neutral-500">Height</p>
-            <p className="text-3xl font-bold">
-              {latestHeight != null ? `${Number(latestHeight).toFixed(0)} cm` : "—"}
+            <p className="text-xs text-neutral-500">
+              {goalWeightKg != null ? "To goal" : "Height"}
             </p>
-            <p className="text-sm text-neutral-500">
-              {latestHeight != null
-                ? `${(Number(latestHeight) / 2.54).toFixed(1)} in`
-                : "Add it once and it'll stick."}
-            </p>
+            {goalWeightKg != null ? (
+              <>
+                <p className="text-3xl font-bold">
+                  {toGoal != null ? `${Math.abs(toGoal).toFixed(1)} kg` : "—"}
+                </p>
+                <p className="text-sm text-neutral-500">
+                  {toGoal == null
+                    ? `goal: ${Number(goalWeightKg).toFixed(1)} kg`
+                    : toGoal > 0
+                    ? `to lose · goal ${Number(goalWeightKg).toFixed(1)} kg`
+                    : toGoal < 0
+                    ? `to gain · goal ${Number(goalWeightKg).toFixed(1)} kg`
+                    : `at goal 🎯`}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-bold">
+                  {latestHeight != null ? `${Number(latestHeight).toFixed(0)} cm` : "—"}
+                </p>
+                <p className="text-sm text-neutral-500">
+                  {latestHeight != null
+                    ? `${(Number(latestHeight) / 2.54).toFixed(1)} in`
+                    : "Add it once and it'll stick."}
+                </p>
+              </>
+            )}
           </div>
         </section>
 
@@ -78,6 +106,7 @@ export default async function WeightPage() {
               weight_kg: m.weight_kg as number | null,
               height_cm: m.height_cm as number | null,
             }))}
+            goalWeightKg={goalWeightKg ? Number(goalWeightKg) : null}
           />
         </section>
 

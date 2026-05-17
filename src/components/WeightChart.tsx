@@ -1,10 +1,25 @@
 "use client";
 
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  ReferenceLine,
+} from "recharts";
 
 type Point = { measured_on: string; weight_kg: number | null; height_cm: number | null };
 
-export default function WeightChart({ data }: { data: Point[] }) {
+export default function WeightChart({
+  data,
+  goalWeightKg = null,
+}: {
+  data: Point[];
+  goalWeightKg?: number | null;
+}) {
   if (data.length === 0) {
     return <p className="text-sm text-neutral-500">Log a measurement to see your chart.</p>;
   }
@@ -17,10 +32,23 @@ export default function WeightChart({ data }: { data: Point[] }) {
           <XAxis dataKey="measured_on" tick={{ fontSize: 11 }} />
           <YAxis domain={["auto", "auto"]} tick={{ fontSize: 11 }} />
           <Tooltip />
+          {goalWeightKg != null && (
+            <ReferenceLine
+              y={Number(goalWeightKg)}
+              stroke="#16a34a"
+              strokeDasharray="4 4"
+              label={{
+                value: `goal ${Number(goalWeightKg).toFixed(1)}`,
+                fontSize: 10,
+                fill: "#16a34a",
+                position: "right",
+              }}
+            />
+          )}
           <Line
             type="monotone"
             dataKey="weight_kg"
-            stroke="#f97316"
+            stroke="#dc2626"
             strokeWidth={2}
             dot={{ r: 3 }}
             connectNulls

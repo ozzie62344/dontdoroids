@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import FoodUploader from "./FoodUploader";
 import FoodEntryCard, { type FoodEntry } from "./FoodEntryCard";
+import ProgressBar from "@/components/ProgressBar";
+import { getGoals } from "@/lib/goals";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,8 @@ export default async function FoodPage() {
 
   const today: FoodEntry[] = (todayRaw ?? []) as FoodEntry[];
   const recent = recentRaw ?? [];
+  const goalsRow = await getGoals();
+  const goals = goalsRow?.goals;
 
   const totals = today.reduce(
     (acc, r) => ({
@@ -49,8 +53,8 @@ export default async function FoodPage() {
     <>
       <Nav email={user.email} />
       <main className="mx-auto max-w-3xl p-4 space-y-6">
-        <section className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5">
-          <h1 className="text-xl font-semibold mb-1">Today</h1>
+        <section className="rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-5 space-y-3">
+          <h1 className="text-xl font-semibold">Today</h1>
           <div className="grid grid-cols-4 gap-3 text-center text-sm">
             <div>
               <div className="text-2xl font-bold text-brand-600">{totals.calories}</div>
@@ -69,6 +73,31 @@ export default async function FoodPage() {
               <div className="text-neutral-500">fat</div>
             </div>
           </div>
+          {goals?.daily_calorie_goal != null && (
+            <div>
+              <div className="flex justify-between text-xs text-neutral-500">
+                <span>kcal</span>
+                <span>
+                  {totals.calories} / {goals.daily_calorie_goal}
+                </span>
+              </div>
+              <ProgressBar value={totals.calories} max={goals.daily_calorie_goal} />
+            </div>
+          )}
+          {goals?.daily_protein_g_goal != null && (
+            <div>
+              <div className="flex justify-between text-xs text-neutral-500">
+                <span>protein</span>
+                <span>
+                  {totals.protein.toFixed(0)}g / {Number(goals.daily_protein_g_goal).toFixed(0)}g
+                </span>
+              </div>
+              <ProgressBar
+                value={totals.protein}
+                max={Number(goals.daily_protein_g_goal)}
+              />
+            </div>
+          )}
         </section>
 
         <FoodUploader userId={user.id} />

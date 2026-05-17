@@ -5,6 +5,7 @@ const tabs = [
   { href: "/food", label: "Food" },
   { href: "/workout", label: "Workouts" },
   { href: "/weight", label: "Body" },
+  { href: "/settings", label: "⚙" },
 ];
 
 export default function Nav({ email }: { email?: string | null }) {
