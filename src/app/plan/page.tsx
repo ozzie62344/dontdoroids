@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import PlanDayCard from "./PlanDayCard";
 import PlanShell from "./PlanShell";
+import FillWeightsButton from "./FillWeightsButton";
 import { fillPlan, todayDayOfWeek } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,15 @@ export default async function PlanPage() {
           </div>
           <PlanShell />
         </header>
+
+        {hasAny && (
+          <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              Have a plan without weights? Let Claude fill them in for you →
+            </p>
+            <FillWeightsButton />
+          </section>
+        )}
 
         <div className="space-y-3">
           {plan.map((day) => (
