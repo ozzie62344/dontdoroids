@@ -63,28 +63,28 @@ export async function loadBodyContext(
 /** Strict weight-scaling guidance Claude must follow. */
 export const WEIGHT_SCALING_RULES = `WEIGHT SCALING RULES (CRITICAL — follow these or the plan is useless):
 
-Every concrete weight you output for a compound lift MUST be calculated from the user's bodyweight using these working-weight multipliers (not 1RM — actual weight they'll do for the sets×reps prescribed):
+These are CONSERVATIVE working-weight multipliers (not 1RM — the actual weight the user will do for the sets×reps prescribed). Intermediate centers around 0.65×BW for most lifts; advanced centers around 0.9×BW. Numbers OUTSIDE these ranges are forbidden.
 
                         BEGINNER       INTERMEDIATE   ADVANCED
-Back Squat              0.50–0.80×BW   0.80–1.30×BW   1.30–1.80×BW
-Front Squat             0.40–0.65×BW   0.65–1.05×BW   1.05–1.50×BW
-Deadlift                0.65–1.05×BW   1.05–1.55×BW   1.55–2.20×BW
-Romanian Deadlift       0.50–0.85×BW   0.85–1.30×BW   1.30–1.80×BW
-Bench Press             0.40–0.65×BW   0.65–1.10×BW   1.10–1.55×BW
-Incline Bench           0.35–0.55×BW   0.55–0.90×BW   0.90–1.30×BW
-Overhead Press          0.25–0.45×BW   0.45–0.65×BW   0.65–0.90×BW
-Barbell Row             0.40–0.65×BW   0.65–0.95×BW   0.95–1.30×BW
-Hip Thrust              0.65–1.05×BW   1.05–1.65×BW   1.65–2.20×BW
+Back Squat              0.30–0.55×BW   0.55–0.75×BW   0.75–1.00×BW
+Front Squat             0.25–0.45×BW   0.45–0.65×BW   0.65–0.85×BW
+Deadlift                0.40–0.60×BW   0.60–0.85×BW   0.85–1.20×BW
+Romanian Deadlift       0.30–0.55×BW   0.55–0.75×BW   0.75–1.00×BW
+Bench Press             0.25–0.45×BW   0.45–0.70×BW   0.70–0.95×BW
+Incline Bench           0.20–0.40×BW   0.40–0.60×BW   0.60–0.85×BW
+Overhead Press          0.20–0.35×BW   0.35–0.55×BW   0.55–0.75×BW
+Barbell Row             0.30–0.50×BW   0.50–0.70×BW   0.70–0.95×BW
+Hip Thrust              0.40–0.65×BW   0.65–0.95×BW   0.95–1.30×BW
 
-CALCULATE THE NUMBER. Example: user bodyweight 123 lb, intermediate, Back Squat → 0.80 × 123 = 98 lb to 1.30 × 123 = 160 lb. Pick a value in that range and round to the nearest 5 lb (or 2.5 kg). Output "100 lb" or "115 lb", NOT "225 lb".
+CALCULATE THE NUMBER. Example: user bodyweight 123 lb, intermediate, Back Squat → 0.55 × 123 = 68 lb to 0.75 × 123 = 92 lb. Pick around the middle (~80 lb), round to the nearest 5 lb (or 2.5 kg). Output "80 lb", NOT "165 lb" and definitely NOT "225 lb".
 
-Isolation exercises (lateral raises, curls, tricep extensions, face pulls, calf raises, leg curls/extensions) use absolute dumbbell/cable weights that do NOT scale linearly with bodyweight. Reasonable starting numbers in lb (halve for kg):
-  - Beginner: 5–15 lb dumbbells / light cable stack
-  - Intermediate: 15–30 lb dumbbells / moderate stack
-  - Advanced: 25–50+ lb dumbbells / heavy stack
+Isolation exercises (lateral raises, curls, tricep extensions, face pulls, calf raises, leg curls/extensions) use absolute dumbbell/cable weights that do NOT scale linearly with bodyweight. Use the LOW end of these ranges for small users (under 140 lb):
+  - Beginner: 5–10 lb dumbbells / light cable stack
+  - Intermediate: 10–20 lb dumbbells / moderate stack
+  - Advanced: 20–35 lb dumbbells / heavy stack
 
-Bodyweight movements (pull-ups, dips, push-ups, lunges, pistol squats): use "bodyweight" or "BW + 25 lb" if the user is advanced enough to add load.
+Bodyweight movements (pull-ups, dips, push-ups, lunges, pistol squats): use "bodyweight" or "BW + 10 lb" only if the user is advanced enough to add load.
 
 Cardio, conditioning, planks, runs, intervals: weight is "—".
 
-NEVER output a compound-lift weight that's higher than the user's bodyweight unless their experience level puts them above 1.0×BW for that lift per the table above. If you do, that's a critical error.`;
+HARD CEILING: Intermediate compound-lift weight must NEVER exceed 0.75×bodyweight for upper-body or 0.85×bodyweight for lower-body. Advanced must NEVER exceed 1.0×bodyweight for upper-body or 1.2×bodyweight for lower-body. If you output a number above these ceilings, that is a critical error — recompute it.`;
