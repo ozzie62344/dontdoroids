@@ -2,52 +2,42 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 
-const MODEL = "claude-sonnet-4-6";
+// Allow this route up to 60s on Vercel (Pro). On Hobby it's ignored — see note below.
+export const maxDuration = 60;
+
+// Haiku 4.5 is fast + cheap and easily handles a 7-day plan in JSON.
+const MODEL = "claude-haiku-4-5";
 
 const SYSTEM_PROMPT = `You are a strength + conditioning coach building a 7-day weekly workout plan.
 
 You will receive: goal, experience level, training days per week, equipment, preferred weight unit (lb or kg), the user's current bodyweight (if known), and free-form notes.
 
-Output ONE JSON array (no markdown, no commentary) of exactly 7 objects, one per weekday in Monday..Sunday order:
+Output ONE JSON array (no markdown, no commentary) of exactly 7 objects, one per weekday in Monday..Sunday order. Day indices: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun.
 
-[
-  {
-    "day_of_week": 0,                    // 0=Mon..6=Sun (must match index)
-    "focus": "Push" | null,              // short label; null only if is_rest_day true
-    "is_rest_day": false,
-    "exercises": [                       // empty array if rest day
-      {
-        "name": "Bench press",
-        "sets": 4,
-        "reps": "6-8",
-        "weight": "135 lb",              // ALWAYS include — use the user's unit
-        "notes": "RPE 8"
-      }
-    ]
-  },
-  ...
-]
+Each object:
+{
+  "day_of_week": 0,                    // 0..6, must match position
+  "focus": "Push" | null,              // 1-3 words; null only if is_rest_day true
+  "is_rest_day": false,
+  "exercises": [                       // empty array if rest day
+    { "name": "Bench press", "sets": 4, "reps": "6-8", "weight": "135 lb", "notes": "RPE 8" }
+  ]
+}
 
-Rules for the weekly structure:
-- Use exactly the number of training days the user requested; fill the rest as rest days.
-- Spread rest days sensibly (don't bunch them all on weekends if the user trains 3 days).
-- Pick exercises that fit the user's equipment. Bodyweight-only users get push-ups, dips, pistol squats, etc. — no barbell.
+Rules:
+- Use EXACTLY the number of training days requested; the rest are rest days. Honor user notes about which specific day(s) to rest.
 - 4-7 exercises per training day. Compound first, isolation later.
-- Keep "focus" to 1-3 words like "Push", "Pull", "Legs + core", "Conditioning".
-
-Rules for "weight" (THIS IS IMPORTANT):
-- Always provide a concrete recommendation, using the user's chosen unit (lb or kg).
-- For loaded exercises, give a starting weight that suits the experience level:
-  * Beginner: conservative starting weights they can do with good form
+- Pick exercises that fit the equipment list.
+- ALWAYS include a "weight" field, using the user's chosen unit (lb or kg):
+  * Beginner: conservative starting weights
   * Intermediate: typical working weights
-  * Advanced: higher working weights
-- Use the user's bodyweight as a sanity check (e.g. beginner bench ≈ 0.5–0.75× bodyweight).
-- For bodyweight exercises (push-ups, pull-ups, lunges, etc.): use "bodyweight" or "BW + 25 lb" for weighted variations.
-- For cardio/holds/conditioning (planks, runs, intervals): weight is "—" (a single dash).
-- Format examples: "135 lb", "60 kg", "20 lb dumbbells", "BW + 25 lb", "bodyweight", "—".
-- "reps" is a string so you can use ranges ("8-10"), "AMRAP", "30s", etc.
-- "notes" should be short or empty — RPE, tempo, or progression tips.
-- Respect the user's constraints (injuries, preferences) from the notes field.`;
+  * Advanced: heavier working weights
+  * Sanity-check against bodyweight (beginner bench ≈ 0.5–0.75× bodyweight, etc.)
+  * Bodyweight moves: "bodyweight" or "BW + 25 lb"
+  * Cardio/holds where loaded weight doesn't apply: "—"
+- "reps" string examples: "8-10", "AMRAP", "30s".
+- "notes" short or empty.
+- Respect injury/time constraints from notes (e.g. "1 hour sessions" → keep volume modest).`;
 
 type Exercise = {
   name: string;
@@ -63,10 +53,21 @@ type PlanDayPayload = {
   exercises: Exercise[];
 };
 
+function extractJsonArray(text: string): string {
+  // Strip code fences and find the first '[' .. last ']' so a trailing comment
+  // or chatty preamble doesn't break JSON.parse.
+  const stripped = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const start = stripped.indexOf("[");
+  const end = stripped.lastIndexOf("]");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("No JSON array found in model response");
+  }
+  return stripped.slice(start, end + 1);
+}
+
 function parsePlan(text: string): PlanDayPayload[] {
-  const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-  const arr = JSON.parse(cleaned);
-  if (!Array.isArray(arr)) throw new Error("Expected array");
+  const arr = JSON.parse(extractJsonArray(text));
+  if (!Array.isArray(arr)) throw new Error("Top-level value is not an array");
   const days: PlanDayPayload[] = [];
   for (let i = 0; i < 7; i++) {
     const raw = arr.find((d) => Number(d?.day_of_week) === i) ?? arr[i];
@@ -126,7 +127,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Goal and experience required" }, { status: 400 });
   }
 
-  // Look up the user's latest weight (kg) so Claude can recommend sensible loads.
   const { data: latestWeight } = await supabase
     .from("body_metrics")
     .select("weight_kg")
@@ -143,32 +143,62 @@ export async function POST(request: Request) {
       unit === "kg" ? `${kg.toFixed(1)} kg` : `${(kg / 0.45359237).toFixed(1)} lb`;
   }
 
+  const userMsg =
+    `Goal: ${goal}\n` +
+    `Experience: ${experience}\n` +
+    `Training days per week: ${daysPerWeek}\n` +
+    `Equipment: ${equipment.join(", ") || "unspecified"}\n` +
+    `Preferred weight unit: ${unit}\n` +
+    `User bodyweight: ${bodyweightStr}\n` +
+    (notes ? `Notes: ${notes}\n` : "") +
+    `\nReturn the JSON array (7 days, Mon..Sun). Every exercise must include "weight" in ${unit} (or "bodyweight" / "—" where loaded weight doesn't apply).`;
+
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  let plan: PlanDayPayload[];
+  let rawText = "";
   try {
-    const userMsg =
-      `Goal: ${goal}\n` +
-      `Experience: ${experience}\n` +
-      `Training days per week: ${daysPerWeek}\n` +
-      `Equipment: ${equipment.join(", ") || "unspecified"}\n` +
-      `Preferred weight unit: ${unit}\n` +
-      `User bodyweight: ${bodyweightStr}\n` +
-      (notes ? `Notes: ${notes}\n` : "") +
-      `\nReturn the 7-day JSON plan now. EVERY exercise must include a "weight" field in ${unit} (or "bodyweight" / "—" where loaded weight doesn't apply).`;
     const msg = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 2500,
+      max_tokens: 4096,
+      temperature: 0.4,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMsg }],
+      messages: [
+        { role: "user", content: userMsg },
+        // Prefill the assistant turn with "[" to force JSON-array output and
+        // stop Claude from preamble-ing.
+        { role: "assistant", content: "[" },
+      ],
     });
     const textBlock = msg.content.find((c) => c.type === "text");
-    if (!textBlock || textBlock.type !== "text") throw new Error("No text in response");
-    plan = parsePlan(textBlock.text);
+    if (!textBlock || textBlock.type !== "text") {
+      return NextResponse.json(
+        { error: "Model returned no text content" },
+        { status: 502 },
+      );
+    }
+    // Because we prefilled "[", the response starts mid-array — re-prepend it.
+    rawText = "[" + textBlock.text;
   } catch (err) {
-    console.error("Claude plan error:", err);
-    return NextResponse.json({ error: "Could not generate plan." }, { status: 502 });
+    console.error("Claude generate-plan API call failed:", err);
+    const detail = err instanceof Error ? err.message : "unknown error";
+    return NextResponse.json(
+      { error: `Anthropic API error: ${detail}` },
+      { status: 502 },
+    );
   }
 
-  return NextResponse.json({ plan });
+  try {
+    const plan = parsePlan(rawText);
+    return NextResponse.json({ plan });
+  } catch (err) {
+    console.error("Plan parse failed. Raw text was:", rawText);
+    const detail = err instanceof Error ? err.message : "parse error";
+    return NextResponse.json(
+      {
+        error: `Could not parse plan: ${detail}`,
+        debug: rawText.slice(0, 800),
+      },
+      { status: 502 },
+    );
+  }
 }

@@ -37,6 +37,7 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [debug, setDebug] = useState<string | null>(null);
   const [preview, setPreview] = useState<PlanDay[] | null>(null);
 
   function toggleEquipment(item: string) {
@@ -48,6 +49,7 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
   async function generate() {
     setBusy(true);
     setErr(null);
+    setDebug(null);
     setPreview(null);
     try {
       const res = await fetch("/api/generate-plan", {
@@ -55,12 +57,12 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ goal, experience, daysPerWeek, equipment, unit, notes }),
       });
+      const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
+        if (j.debug) setDebug(String(j.debug));
         throw new Error(j.error ?? res.statusText);
       }
-      const { plan } = await res.json();
-      setPreview(plan);
+      setPreview(j.plan);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
     }
@@ -197,7 +199,17 @@ export default function GeneratePlanModal({ onClose }: { onClose: () => void }) 
               />
             </label>
 
-            {err && <p className="text-sm text-red-600">{err}</p>}
+            {err && (
+              <div className="space-y-1">
+                <p className="text-sm text-red-600">{err}</p>
+                {debug && (
+                  <details className="text-xs">
+                    <summary className="text-neutral-500 cursor-pointer">show raw model output</summary>
+                    <pre className="mt-1 max-h-40 overflow-auto bg-neutral-100 dark:bg-neutral-800 p-2 rounded text-[10px] whitespace-pre-wrap">{debug}</pre>
+                  </details>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end gap-2">
               <button
