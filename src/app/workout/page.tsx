@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import WorkoutForm from "./WorkoutForm";
 import StreakCalendar from "@/components/StreakCalendar";
+import Link from "next/link";
 import { computeStreaks, daysAgoStr, todayStr } from "@/lib/dates";
 import { getGoals, startOfWeekStr } from "@/lib/goals";
+import { fillPlan, todayDayOfWeek, DAY_LABELS_LONG } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,14 @@ export default async function WorkoutPage() {
   const workoutsThisWeek = (rows ?? []).filter((r) => (r.day as string) >= weekStart).length;
   const goalsRow = await getGoals();
   const weeklyGoal = goalsRow?.goals?.weekly_workout_goal ?? null;
+
+  const { data: planRows } = await supabase
+    .from("workout_plan")
+    .select("day_of_week, focus, is_rest_day, exercises")
+    .eq("user_id", user.id);
+  const todayPlan = fillPlan(planRows ?? [])[todayDayOfWeek()];
+  const hasPlannedToday =
+    !todayPlan.is_rest_day && (todayPlan.focus != null || todayPlan.exercises.length > 0);
 
   return (
     <>
@@ -70,6 +80,55 @@ export default async function WorkoutPage() {
                 />
               </div>
             </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-5">
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="font-semibold">
+              Today’s plan
+              <span className="text-sm font-normal text-neutral-500 ml-2">
+                {DAY_LABELS_LONG[todayDayOfWeek()]}
+              </span>
+            </h2>
+            <Link href="/plan" className="text-xs text-brand-600 hover:underline">
+              edit plan →
+            </Link>
+          </div>
+          {todayPlan.is_rest_day ? (
+            <p className="text-sm text-neutral-500">Rest day. Don’t feel guilty.</p>
+          ) : hasPlannedToday ? (
+            <>
+              {todayPlan.focus && (
+                <p className="text-sm font-medium text-brand-600">{todayPlan.focus}</p>
+              )}
+              {todayPlan.exercises.length > 0 && (
+                <ul className="mt-1 text-sm space-y-0.5">
+                  {todayPlan.exercises.map((e, i) => (
+                    <li key={i}>
+                      <span className="font-medium">{e.name}</span>
+                      {(e.sets || e.reps) && (
+                        <span className="text-neutral-500">
+                          {" — "}
+                          {e.sets ? `${e.sets}×` : ""}
+                          {e.reps ?? ""}
+                        </span>
+                      )}
+                      {e.notes && (
+                        <span className="text-xs text-neutral-500"> · {e.notes}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-neutral-500">
+              No plan set.{" "}
+              <Link href="/plan" className="text-brand-600 hover:underline">
+                Set one →
+              </Link>
+            </p>
           )}
         </section>
 

@@ -4,6 +4,7 @@ const tabs = [
   { href: "/dashboard", label: "Home" },
   { href: "/food", label: "Food" },
   { href: "/workout", label: "Workouts" },
+  { href: "/plan", label: "Plan" },
   { href: "/weight", label: "Body" },
   { href: "/settings", label: "⚙" },
 ];
