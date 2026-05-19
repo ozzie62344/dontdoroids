@@ -28,6 +28,7 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
   const [mode, setMode] = useState<Mode>("display");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   // edit-mode form state
   const [label, setLabel] = useState(entry.label ?? "");
@@ -143,7 +144,13 @@ export default function FoodEntryCard({ entry }: { entry: FoodEntry }) {
                 </span>
               </div>
               {entry.notes && (
-                <p className="text-xs text-neutral-500 line-clamp-2">{entry.notes}</p>
+                <p
+                  onClick={() => setNotesExpanded((v) => !v)}
+                  className={`text-xs text-neutral-500 cursor-pointer ${notesExpanded ? "" : "line-clamp-2"}`}
+                  title={notesExpanded ? "Click to collapse" : "Click to expand"}
+                >
+                  {entry.notes}
+                </p>
               )}
             </>
           )}
