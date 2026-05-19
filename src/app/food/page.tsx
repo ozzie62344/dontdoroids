@@ -3,8 +3,10 @@ import Nav from "@/components/Nav";
 import FoodUploader from "./FoodUploader";
 import FoodDescriber from "./FoodDescriber";
 import FoodEntryCard, { type FoodEntry } from "./FoodEntryCard";
+import RecentEntries from "./RecentEntries";
 import ProgressBar from "@/components/ProgressBar";
 import { getGoals } from "@/lib/goals";
+import { daysAgoStr, toLocalDateStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +37,43 @@ export default async function FoodPage() {
     .order("eaten_at", { ascending: false })
     .limit(15);
 
+  // Past 7 days (today + 6) for the weekly summary.
+  const weekFromISO = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - 6);
+    return d.toISOString();
+  })();
+  const { data: weekRaw } = await supabase
+    .from("food_entries")
+    .select("eaten_at, calories")
+    .eq("user_id", user.id)
+    .gte("eaten_at", weekFromISO);
+
   const today: FoodEntry[] = (todayRaw ?? []) as FoodEntry[];
-  const recent = recentRaw ?? [];
+  const recent = (recentRaw ?? []) as {
+    id: string;
+    eaten_at: string;
+    label: string | null;
+    calories: number | null;
+  }[];
   const goalsRow = await getGoals();
   const goals = goalsRow?.goals;
+
+  // Build a Map of YYYY-MM-DD -> total kcal for the last 7 days.
+  const dayTotals = new Map<string, number>();
+  for (let i = 6; i >= 0; i--) dayTotals.set(daysAgoStr(i), 0);
+  for (const row of weekRaw ?? []) {
+    const key = toLocalDateStr(new Date(row.eaten_at as string));
+    if (dayTotals.has(key)) {
+      dayTotals.set(key, (dayTotals.get(key) ?? 0) + (row.calories ?? 0));
+    }
+  }
+  const weekDays = [...dayTotals.entries()];
+  const weekAvg = Math.round(
+    weekDays.reduce((a, [, kcal]) => a + kcal, 0) / weekDays.length,
+  );
+  const weekMax = Math.max(1, ...weekDays.map(([, k]) => k));
 
   const totals = today.reduce(
     (acc, r) => ({
@@ -141,19 +176,39 @@ export default async function FoodPage() {
           ))}
         </section>
 
+        <section className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 space-y-3">
+          <div className="flex justify-between items-baseline">
+            <h2 className="text-lg font-semibold">Past 7 days</h2>
+            <span className="text-xs text-neutral-500">avg {weekAvg} kcal/day</span>
+          </div>
+          <ul className="space-y-1.5">
+            {weekDays.map(([day, kcal]) => {
+              const label = new Date(day + "T00:00:00").toLocaleDateString(undefined, {
+                weekday: "short",
+                month: "numeric",
+                day: "numeric",
+              });
+              const pct = Math.round((kcal / weekMax) * 100);
+              return (
+                <li key={day} className="flex items-center gap-2 text-xs">
+                  <span className="w-16 text-neutral-500">{label}</span>
+                  <div className="flex-1 h-2 rounded bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                    <div
+                      className="h-full bg-brand-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-14 text-right tabular-nums">{kcal} kcal</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
         {recent.length > 0 && (
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">Earlier</h2>
-            <ul className="text-sm divide-y divide-neutral-200 dark:divide-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-              {recent.map((e) => (
-                <li key={e.id as string} className="px-3 py-2 flex justify-between">
-                  <span>{e.label}</span>
-                  <span className="text-neutral-500">
-                    {new Date(e.eaten_at as string).toLocaleDateString()} · {e.calories} kcal
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <RecentEntries entries={recent} />
           </section>
         )}
       </main>
