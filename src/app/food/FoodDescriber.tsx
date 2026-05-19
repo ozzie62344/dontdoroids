@@ -3,9 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+function todayISODate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function eatenAtForDate(ymd: string): string | undefined {
+  if (!ymd || ymd === todayISODate()) return undefined;
+  return new Date(`${ymd}T12:00:00`).toISOString();
+}
+
 export default function FoodDescriber() {
   const router = useRouter();
   const [description, setDescription] = useState("");
+  const [eatenDate, setEatenDate] = useState<string>(todayISODate());
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -19,7 +33,7 @@ export default function FoodDescriber() {
     const res = await fetch("/api/describe-food", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: text }),
+      body: JSON.stringify({ description: text, eatenAt: eatenAtForDate(eatenDate) }),
     });
 
     if (!res.ok) {
@@ -63,6 +77,17 @@ export default function FoodDescriber() {
         >
           {busy ? "Working…" : "Log"}
         </button>
+      </div>
+      <div className="flex items-center gap-2 text-xs text-neutral-500">
+        <label>Date</label>
+        <input
+          type="date"
+          value={eatenDate}
+          max={todayISODate()}
+          onChange={(e) => setEatenDate(e.target.value || todayISODate())}
+          disabled={busy}
+          className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1"
+        />
       </div>
       {status && (
         <p className="text-sm text-neutral-700 dark:text-neutral-300">{status}</p>

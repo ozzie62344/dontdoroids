@@ -5,6 +5,7 @@ import Nav from "@/components/Nav";
 import ProgressBar from "@/components/ProgressBar";
 import { computeStreaks, daysAgoStr } from "@/lib/dates";
 import { getGoals, startOfWeekStr } from "@/lib/goals";
+import { todayDayOfWeek, type Exercise } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,9 @@ export default async function DashboardPage() {
   const goals = goalsRow.goals;
 
   const weekStart = startOfWeekStr();
+  const todayDow = todayDayOfWeek();
 
-  const [todayFood, workouts, weekWorkouts, latestMetric] = await Promise.all([
+  const [todayFood, workouts, weekWorkouts, latestMetric, todaysPlan] = await Promise.all([
     supabase
       .from("food_entries")
       .select("calories, protein_g, fat_g, sugar_g")
@@ -50,6 +52,12 @@ export default async function DashboardPage() {
       .not("weight_kg", "is", null)
       .order("measured_on", { ascending: false })
       .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("workout_plan")
+      .select("focus, is_rest_day, exercises")
+      .eq("user_id", user.id)
+      .eq("day_of_week", todayDow)
       .maybeSingle(),
   ]);
 
@@ -77,6 +85,12 @@ export default async function DashboardPage() {
     ? Number(latestMetric.data.weight_kg).toFixed(1)
     : null;
   const goalWeight = goals.goal_weight_kg ? Number(goals.goal_weight_kg).toFixed(1) : null;
+  const planRow = todaysPlan.data;
+  const planExercises = Array.isArray(planRow?.exercises)
+    ? (planRow.exercises as Exercise[])
+    : [];
+  const hasPlanToday =
+    planRow != null && (planRow.is_rest_day || planRow.focus || planExercises.length > 0);
 
   return (
     <>
@@ -188,6 +202,25 @@ export default async function DashboardPage() {
                 max={goals.weekly_workout_goal}
                 className="mt-1"
               />
+            </div>
+          )}
+          {hasPlanToday && (
+            <div className="mt-3 border-t border-neutral-200 dark:border-neutral-800 pt-3 text-sm">
+              <p className="text-xs uppercase tracking-wide text-neutral-500">Today’s plan</p>
+              {planRow!.is_rest_day ? (
+                <p className="text-neutral-500">Rest day</p>
+              ) : (
+                <>
+                  {planRow!.focus && (
+                    <p className="font-medium text-brand-600">{planRow!.focus}</p>
+                  )}
+                  {planExercises.length > 0 && (
+                    <p className="text-neutral-600 dark:text-neutral-400 truncate">
+                      {planExercises.map((e) => e.name).join(" · ")}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           )}
           <p className="mt-3 text-sm text-brand-600">Log today →</p>

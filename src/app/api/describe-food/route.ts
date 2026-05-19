@@ -34,6 +34,13 @@ type FoodEstimate = {
   notes: string;
 };
 
+function parseEatenAt(raw: unknown): string | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
 function parseEstimate(text: string): FoodEstimate {
   const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   const obj = JSON.parse(cleaned);
@@ -69,6 +76,7 @@ export async function POST(request: Request) {
   if (description.length > 500) {
     return NextResponse.json({ error: "Description too long (500 chars max)" }, { status: 400 });
   }
+  const eatenAt = parseEatenAt(body?.eatenAt);
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -109,6 +117,7 @@ export async function POST(request: Request) {
       sugar_g: estimate.sugar_g,
       notes: estimate.notes,
       ai_raw: { ...(estimate as unknown as Record<string, unknown>), user_description: description },
+      ...(eatenAt ? { eaten_at: eatenAt } : {}),
     })
     .select()
     .single();

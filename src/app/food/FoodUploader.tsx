@@ -35,11 +35,25 @@ async function resizeImage(file: File): Promise<Blob> {
   });
 }
 
+function todayISODate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function eatenAtForDate(ymd: string): string | undefined {
+  if (!ymd || ymd === todayISODate()) return undefined;
+  return new Date(`${ymd}T12:00:00`).toISOString();
+}
+
 export default function FoodUploader({ userId }: { userId: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [eatenDate, setEatenDate] = useState<string>(todayISODate());
 
   async function handleFile(file: File) {
     setBusy(true);
@@ -64,7 +78,7 @@ export default function FoodUploader({ userId }: { userId: string }) {
     const res = await fetch("/api/analyze-food", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ photoPath: path }),
+      body: JSON.stringify({ photoPath: path, eatenAt: eatenAtForDate(eatenDate) }),
     });
 
     if (!res.ok) {
@@ -84,10 +98,21 @@ export default function FoodUploader({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 p-6 text-center">
-      <p className="text-sm text-neutral-500 mb-3">
+    <div className="rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 p-6 text-center space-y-3">
+      <p className="text-sm text-neutral-500">
         Snap or pick a photo of your meal. Claude will estimate calories + macros.
       </p>
+      <div className="flex items-center justify-center gap-2 text-sm">
+        <label className="text-neutral-500">Date</label>
+        <input
+          type="date"
+          value={eatenDate}
+          max={todayISODate()}
+          onChange={(e) => setEatenDate(e.target.value || todayISODate())}
+          disabled={busy}
+          className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1"
+        />
+      </div>
       <label className="inline-block">
         <input
           ref={inputRef}
@@ -108,7 +133,7 @@ export default function FoodUploader({ userId }: { userId: string }) {
         </span>
       </label>
       {status && (
-        <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">{status}</p>
+        <p className="text-sm text-neutral-700 dark:text-neutral-300">{status}</p>
       )}
     </div>
   );

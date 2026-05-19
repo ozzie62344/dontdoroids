@@ -4,18 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DAY_LABELS_LONG, type Exercise, type PlanDay } from "@/lib/plan";
+import { todayStr } from "@/lib/dates";
 
 export default function PlanDayCard({
   day,
   isToday,
+  doneToday = false,
 }: {
   day: PlanDay;
   isToday: boolean;
+  doneToday?: boolean;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [markBusy, setMarkBusy] = useState(false);
 
   const [focus, setFocus] = useState(day.focus ?? "");
   const [isRest, setIsRest] = useState(day.is_rest_day);
@@ -82,6 +86,28 @@ export default function PlanDayCard({
     setEditing(false);
   }
 
+  async function markDone() {
+    setMarkBusy(true);
+    setErr(null);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setErr("Not logged in");
+      setMarkBusy(false);
+      return;
+    }
+    const { error } = await supabase.from("workouts").upsert(
+      { user_id: user.id, day: todayStr(), kind: "lift" },
+      { onConflict: "user_id,day" },
+    );
+    setMarkBusy(false);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <article
       className={`rounded-2xl border p-4 ${
@@ -141,6 +167,24 @@ export default function PlanDayCard({
             </>
           ) : (
             <p className="text-sm text-neutral-500 italic">Nothing planned yet</p>
+          )}
+          {isToday && !day.is_rest_day && (
+            <div className="mt-3">
+              {doneToday ? (
+                <span className="inline-flex items-center text-xs px-2 py-1 rounded bg-brand-50 dark:bg-brand-700/20 text-brand-700 dark:text-brand-400">
+                  ✓ Done today
+                </span>
+              ) : (
+                <button
+                  onClick={markDone}
+                  disabled={markBusy}
+                  className="text-xs px-3 py-1 rounded bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white font-medium"
+                >
+                  {markBusy ? "Saving…" : "Mark workout done"}
+                </button>
+              )}
+              {err && <p className="mt-1 text-xs text-red-600">{err}</p>}
+            </div>
           )}
         </>
       )}

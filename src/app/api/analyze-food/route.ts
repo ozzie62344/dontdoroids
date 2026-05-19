@@ -33,6 +33,13 @@ type FoodEstimate = {
   notes: string;
 };
 
+function parseEatenAt(raw: unknown): string | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
 function parseEstimate(text: string): FoodEstimate {
   const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   const obj = JSON.parse(cleaned);
@@ -65,6 +72,7 @@ export async function POST(request: Request) {
   if (!photoPath || !photoPath.startsWith(user.id + "/")) {
     return NextResponse.json({ error: "Invalid photoPath" }, { status: 400 });
   }
+  const eatenAt = parseEatenAt(body?.eatenAt);
 
   // Pull the photo bytes via storage (RLS-scoped to this user).
   const { data: blob, error: dlErr } = await supabase.storage
@@ -120,6 +128,7 @@ export async function POST(request: Request) {
       sugar_g: estimate.sugar_g,
       notes: estimate.notes,
       ai_raw: estimate as unknown as Record<string, unknown>,
+      ...(eatenAt ? { eaten_at: eatenAt } : {}),
     })
     .select()
     .single();

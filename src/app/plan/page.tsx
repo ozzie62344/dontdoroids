@@ -4,6 +4,7 @@ import PlanDayCard from "./PlanDayCard";
 import PlanShell from "./PlanShell";
 import FillWeightsButton from "./FillWeightsButton";
 import { fillPlan, todayDayOfWeek } from "@/lib/plan";
+import { todayStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -12,14 +13,23 @@ export default async function PlanPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: rows } = await supabase
-    .from("workout_plan")
-    .select("day_of_week, focus, is_rest_day, exercises")
-    .eq("user_id", user.id);
+  const [{ data: rows }, { data: todaysWorkout }] = await Promise.all([
+    supabase
+      .from("workout_plan")
+      .select("day_of_week, focus, is_rest_day, exercises")
+      .eq("user_id", user.id),
+    supabase
+      .from("workouts")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("day", todayStr())
+      .maybeSingle(),
+  ]);
 
   const plan = fillPlan(rows ?? []);
   const todayIdx = todayDayOfWeek();
   const hasAny = (rows ?? []).length > 0;
+  const doneToday = !!todaysWorkout;
 
   return (
     <>
@@ -52,6 +62,7 @@ export default async function PlanPage() {
               key={day.day_of_week}
               day={day}
               isToday={day.day_of_week === todayIdx}
+              doneToday={day.day_of_week === todayIdx && doneToday}
             />
           ))}
         </div>
