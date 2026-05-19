@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import FoodUploader from "./FoodUploader";
+import FoodDescriber from "./FoodDescriber";
 import FoodEntryCard, { type FoodEntry } from "./FoodEntryCard";
 import ProgressBar from "@/components/ProgressBar";
 import { getGoals } from "@/lib/goals";
@@ -128,11 +129,12 @@ export default async function FoodPage() {
         </section>
 
         <FoodUploader userId={user.id} />
+        <FoodDescriber />
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Today’s meals</h2>
           {today.length === 0 && (
-            <p className="text-sm text-neutral-500">Nothing yet. Upload a photo to get started.</p>
+            <p className="text-sm text-neutral-500">Nothing yet. Upload a photo or type what you ate.</p>
           )}
           {today.map((entry) => (
             <FoodEntryCard key={entry.id} entry={entry} />
