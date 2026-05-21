@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { startOfDayUTC } from "@/lib/dates";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -36,6 +37,10 @@ type FoodEstimate = {
 
 function parseEatenAt(raw: unknown): string | undefined {
   if (typeof raw !== "string" || !raw) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const midnight = startOfDayUTC(raw);
+    return new Date(midnight.getTime() + 12 * 3600_000).toISOString();
+  }
   const d = new Date(raw);
   if (isNaN(d.getTime())) return undefined;
   return d.toISOString();

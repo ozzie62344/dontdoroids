@@ -3,17 +3,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import ProgressBar from "@/components/ProgressBar";
-import { computeStreaks, daysAgoStr } from "@/lib/dates";
+import { computeStreaks, daysAgoStr, startOfTodayISO } from "@/lib/dates";
 import { getGoals, startOfWeekStr } from "@/lib/goals";
 import { todayDayOfWeek, type Exercise } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
-
-function startOfTodayISO() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient();

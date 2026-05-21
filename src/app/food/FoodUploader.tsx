@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { todayStr } from "@/lib/dates";
 
 const MAX_EDGE = 1536; // longest-side cap before upload
 const JPEG_QUALITY = 0.85;
@@ -35,25 +36,12 @@ async function resizeImage(file: File): Promise<Blob> {
   });
 }
 
-function todayISODate() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function eatenAtForDate(ymd: string): string | undefined {
-  if (!ymd || ymd === todayISODate()) return undefined;
-  return new Date(`${ymd}T12:00:00`).toISOString();
-}
-
 export default function FoodUploader({ userId }: { userId: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [eatenDate, setEatenDate] = useState<string>(todayISODate());
+  const [eatenDate, setEatenDate] = useState<string>(todayStr());
 
   async function handleFile(file: File) {
     setBusy(true);
@@ -78,7 +66,10 @@ export default function FoodUploader({ userId }: { userId: string }) {
     const res = await fetch("/api/analyze-food", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ photoPath: path, eatenAt: eatenAtForDate(eatenDate) }),
+      body: JSON.stringify({
+        photoPath: path,
+        eatenAt: eatenDate === todayStr() ? undefined : eatenDate,
+      }),
     });
 
     if (!res.ok) {
@@ -107,8 +98,8 @@ export default function FoodUploader({ userId }: { userId: string }) {
         <input
           type="date"
           value={eatenDate}
-          max={todayISODate()}
-          onChange={(e) => setEatenDate(e.target.value || todayISODate())}
+          max={todayStr()}
+          onChange={(e) => setEatenDate(e.target.value || todayStr())}
           disabled={busy}
           className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1"
         />
