@@ -2,24 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-function todayISODate() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function eatenAtForDate(ymd: string): string | undefined {
-  if (!ymd || ymd === todayISODate()) return undefined;
-  return new Date(`${ymd}T12:00:00`).toISOString();
-}
+import { todayStr } from "@/lib/dates";
 
 export default function FoodDescriber() {
   const router = useRouter();
   const [description, setDescription] = useState("");
-  const [eatenDate, setEatenDate] = useState<string>(todayISODate());
+  const [eatenDate, setEatenDate] = useState<string>(todayStr());
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +21,10 @@ export default function FoodDescriber() {
     const res = await fetch("/api/describe-food", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: text, eatenAt: eatenAtForDate(eatenDate) }),
+      body: JSON.stringify({
+        description: text,
+        eatenAt: eatenDate === todayStr() ? undefined : eatenDate,
+      }),
     });
 
     if (!res.ok) {
@@ -83,8 +74,8 @@ export default function FoodDescriber() {
         <input
           type="date"
           value={eatenDate}
-          max={todayISODate()}
-          onChange={(e) => setEatenDate(e.target.value || todayISODate())}
+          max={todayStr()}
+          onChange={(e) => setEatenDate(e.target.value || todayStr())}
           disabled={busy}
           className="rounded border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1"
         />

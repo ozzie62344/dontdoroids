@@ -6,15 +6,9 @@ import FoodEntryCard, { type FoodEntry } from "./FoodEntryCard";
 import RecentEntries from "./RecentEntries";
 import ProgressBar from "@/components/ProgressBar";
 import { getGoals } from "@/lib/goals";
-import { daysAgoStr, toLocalDateStr } from "@/lib/dates";
+import { daysAgoStr, startOfDayUTC, startOfTodayISO, toLocalDateStr } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
-
-function startOfTodayISO() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
 
 export default async function FoodPage() {
   const supabase = await createClient();
@@ -37,13 +31,8 @@ export default async function FoodPage() {
     .order("eaten_at", { ascending: false })
     .limit(15);
 
-  // Past 7 days (today + 6) for the weekly summary.
-  const weekFromISO = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - 6);
-    return d.toISOString();
-  })();
+  // Past 7 days (today + 6) for the weekly summary, anchored to APP_TIMEZONE.
+  const weekFromISO = startOfDayUTC(daysAgoStr(6)).toISOString();
   const { data: weekRaw } = await supabase
     .from("food_entries")
     .select("eaten_at, calories")

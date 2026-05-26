@@ -24,9 +24,11 @@ export const DAY_LABELS_LONG = [
   "Sunday",
 ] as const;
 
-/** JS Date.getDay(): 0=Sun..6=Sat. Convert to our 0=Mon..6=Sun. */
+import { todayDayOfWeekSun0 } from "@/lib/dates";
+
+/** Today's day-of-week in APP_TIMEZONE, as 0=Mon..6=Sun. */
 export function todayDayOfWeek(): number {
-  const dow = new Date().getDay();
+  const dow = todayDayOfWeekSun0(); // 0=Sun..6=Sat
   return dow === 0 ? 6 : dow - 1;
 }
 

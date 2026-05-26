@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { toLocalDateStr } from "@/lib/dates";
+import { addDaysStr, todayDayOfWeekSun0, todayStr } from "@/lib/dates";
 
 export type UserGoals = {
   daily_calorie_goal: number | null;
@@ -25,12 +25,9 @@ export async function getGoals(): Promise<{ userId: string; goals: UserGoals | n
   return { userId: user.id, goals: (data as UserGoals | null) ?? null };
 }
 
-/** Monday-start of the current week (ISO style) as YYYY-MM-DD. */
+/** Monday-start of the current week (YYYY-MM-DD), anchored to APP_TIMEZONE. */
 export function startOfWeekStr(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const dow = d.getDay(); // 0=Sun..6=Sat
+  const dow = todayDayOfWeekSun0(); // 0=Sun..6=Sat
   const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + mondayOffset);
-  return toLocalDateStr(d);
+  return addDaysStr(todayStr(), mondayOffset);
 }

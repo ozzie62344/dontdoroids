@@ -1,15 +1,12 @@
-import { toLocalDateStr } from "@/lib/dates";
+import { addDaysStr, todayStr } from "@/lib/dates";
 
 export default function StreakCalendar({ days }: { days: Set<string> }) {
   // 7 columns (days of week) x 13 weeks ≈ ~3 months back.
   const cells: { date: string; done: boolean; isToday: boolean }[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = todayStr();
   const total = 13 * 7;
   for (let i = total - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const ds = toLocalDateStr(d);
+    const ds = addDaysStr(today, -i);
     cells.push({ date: ds, done: days.has(ds), isToday: i === 0 });
   }
 
